@@ -1,2 +1,0 @@
-# Vortexa
-SC BUG VORTEXA
