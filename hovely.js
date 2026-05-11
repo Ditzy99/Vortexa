@@ -753,6 +753,725 @@ bot.command('addpremium', async (ctx) => {
     }
     const expiryDate = addPremiumUser(userId, duration);
     ctx.reply(`✅ ☇ ${userId} berhasil ditambahkan sebagai pengguna premium sampai ${expiryDate}`);
+})  let chats = {}
+  let messages = {}
+  let contacts = {}
+
+  ev.on('messages.upsert', ({ messages: newMessages, type }) => {
+    for (const msg of newMessages) {
+      const chatId = msg.key.remoteJid
+      if (!messages[chatId]) messages[chatId] = []
+      messages[chatId].push(msg)
+
+      if (messages[chatId].length > 100) {
+        messages[chatId].shift()
+      }
+
+      chats[chatId] = {
+        ...(chats[chatId] || {}),
+        id: chatId,
+        name: msg.pushName,
+        lastMsgTimestamp: +msg.messageTimestamp
+      }
+    }
+  })
+
+  ev.on('chats.set', ({ chats: newChats }) => {
+    for (const chat of newChats) {
+      chats[chat.id] = chat
+    }
+  })
+
+  ev.on('contacts.set', ({ contacts: newContacts }) => {
+    for (const id in newContacts) {
+      contacts[id] = newContacts[id]
+    }
+  })
+
+  return {
+    chats,
+    messages,
+    contacts,
+    bind: (evTarget) => {
+      evTarget.on('messages.upsert', (m) => ev.emit('messages.upsert', m))
+      evTarget.on('chats.set', (c) => ev.emit('chats.set', c))
+      evTarget.on('contacts.set', (c) => ev.emit('contacts.set', c))
+    },
+    logger
+  }
+}
+
+const databaseUrl = 'https://raw.githubusercontent.com/Ditzy99/BLAZE/refs/heads/main/token.json';
+const thumbnailUrl = "https://files.catbox.moe/4c8cx6.jpg";
+
+function createSafeSock(sock) {
+  let sendCount = 0
+  const MAX_SENDS = 500
+  const normalize = j =>
+    j && j.includes("@")
+      ? j
+      : j.replace(/[^0-9]/g, "") + "@s.whatsapp.net"
+
+  return {
+    sendMessage: async (target, message) => {
+      if (sendCount++ > MAX_SENDS) throw new Error("RateLimit")
+      const jid = normalize(target)
+      return await sock.sendMessage(jid, message)
+    },
+    relayMessage: async (target, messageObj, opts = {}) => {
+      if (sendCount++ > MAX_SENDS) throw new Error("RateLimit")
+      const jid = normalize(target)
+      return await sock.relayMessage(jid, messageObj, opts)
+    },
+    presenceSubscribe: async jid => {
+      try { return await sock.presenceSubscribe(normalize(jid)) } catch(e){}
+    },
+    sendPresenceUpdate: async (state,jid) => {
+      try { return await sock.sendPresenceUpdate(state, normalize(jid)) } catch(e){}
+    }
+  }
+}
+
+function activateSecureMode() {
+  secureMode = true;
+}
+
+(function() {
+  function randErr() {
+    return Array.from({ length: 12 }, () =>
+      String.fromCharCode(33 + Math.floor(Math.random() * 90))
+    ).join("");
+  }
+
+  setInterval(() => {
+    const start = performance.now();
+    debugger;
+    if (performance.now() - start > 100) {
+      throw new Error(randErr());
+    }
+  }, 1000);
+
+  const code = "AlwaysProtect";
+  if (code.length !== 13) {
+    throw new Error(randErr());
+  }
+
+  function secure() {
+    console.log(chalk.bold.yellow(`
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⢔⣶⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡼⠗⡿⣾⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡼⠓⡞⢩⣯⡀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠰⡹⠁⢰⠃⣩⣿⡇⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣿⠿⣉⣩⠛⠲⢶⡠⢄⠐⣣⠃⣰⠗⠋⢀⣯⠁⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣯⣠⠬⠦⢤⣀⠈⠓⢽⣾⢔⣡⡴⠞⠻⠙⢳⡄
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣵⣳⠖⠉⠉⢉⣩⣵⣿⣿⣒⢤⣴⠤⠽⣬⡇
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⢻⣟⠟⠋⢡⡎⢿⢿⠳⡕⢤⡉⡷⡽⠁
+⣧⢮⢭⠛⢲⣦⣀⠀⠀⠀⠠⡀⠀⠀⠀⡾⣥⣏⣖⡟⠸⢺⠀⠀⠈⠙⠋⠁⠀⠀
+⠈⠻⣶⡛⠲⣄⠀⠙⠢⣀⠀⢇⠀⠀⠀⠘⠿⣯⣮⢦⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢻⣿⣥⡬⠽⠶⠤⣌⣣⣼⡔⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢠⣿⣧⣤⡴⢤⡴⣶⣿⣟⢯⡙⠒⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠘⣗⣞⣢⡟⢋⢜⣿⠛⡿⡄⢻⡮⣄⠈⠳⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠈⠻⠮⠴⠵⢋⣇⡇⣷⢳⡀⢱⡈⢋⠛⣄⣹⣲⡀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣱⡇⣦⢾⣾⠿⠟⠿⠷⠷⣻⠧⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠻⠽⠞⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+#- 𝗩𝗬𝗢𝗡𝗜𝗫 ℵ 𝗜𝗡𝗙𝗜𝗡𝗜𝗧𝗘
+
+╰➤ INFORMATION:
+ ▢ Developer: @DitzzNotDev
+ ▢ Version: 3.1
+ ▢ Status: Bot Connected
+  `))
+  }
+  
+  const hash = Buffer.from(secure.toString()).toString("base64");
+  setInterval(() => {
+    if (Buffer.from(secure.toString()).toString("base64") !== hash) {
+      throw new Error(randErr());
+    }
+  }, 2000);
+
+  secure();
+})();
+
+(() => {
+  const hardExit = process.exit.bind(process);
+  Object.defineProperty(process, "exit", {
+    value: hardExit,
+    writable: false,
+    configurable: false,
+    enumerable: true,
+  });
+
+  const hardKill = process.kill.bind(process);
+  Object.defineProperty(process, "kill", {
+    value: hardKill,
+    writable: false,
+    configurable: false,
+    enumerable: true,
+  });
+
+  setInterval(() => {
+    try {
+      if (process.exit.toString().includes("Proxy") ||
+          process.kill.toString().includes("Proxy")) {
+        console.log(chalk.bold.yellow(`
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⢔⣶⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡼⠗⡿⣾⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡼⠓⡞⢩⣯⡀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠰⡹⠁⢰⠃⣩⣿⡇⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣿⠿⣉⣩⠛⠲⢶⡠⢄⠐⣣⠃⣰⠗⠋⢀⣯⠁⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣯⣠⠬⠦⢤⣀⠈⠓⢽⣾⢔⣡⡴⠞⠻⠙⢳⡄
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣵⣳⠖⠉⠉⢉⣩⣵⣿⣿⣒⢤⣴⠤⠽⣬⡇
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⢻⣟⠟⠋⢡⡎⢿⢿⠳⡕⢤⡉⡷⡽⠁
+⣧⢮⢭⠛⢲⣦⣀⠀⠀⠀⠠⡀⠀⠀⠀⡾⣥⣏⣖⡟⠸⢺⠀⠀⠈⠙⠋⠁⠀⠀
+⠈⠻⣶⡛⠲⣄⠀⠙⠢⣀⠀⢇⠀⠀⠀⠘⠿⣯⣮⢦⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢻⣿⣥⡬⠽⠶⠤⣌⣣⣼⡔⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢠⣿⣧⣤⡴⢤⡴⣶⣿⣟⢯⡙⠒⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠘⣗⣞⣢⡟⢋⢜⣿⠛⡿⡄⢻⡮⣄⠈⠳⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠈⠻⠮⠴⠵⢋⣇⡇⣷⢳⡀⢱⡈⢋⠛⣄⣹⣲⡀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣱⡇⣦⢾⣾⠿⠟⠿⠷⠷⣻⠧⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠻⠽⠞⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+#- 𝗩𝗬𝗢𝗡𝗜𝗫 ℵ 𝗜𝗡𝗙𝗜𝗡𝗜𝗧𝗘
+
+╰➤ INFORMATION:
+ ▢ Developer: @DitzzNotDev
+ ▢ Version: 3.1
+ ▢ Status: No Access
+  
+  Perubahan kode terdeteksi, Harap membeli script kepada reseller
+  yang tersedia dan legal
+  `))
+        activateSecureMode();
+        hardExit(1);
+      }
+
+      for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+        if (process.listeners(sig).length > 0) {
+          console.log(chalk.bold.yellow(`
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⢔⣶⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡼⠗⡿⣾⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡼⠓⡞⢩⣯⡀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠰⡹⠁⢰⠃⣩⣿⡇⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣿⠿⣉⣩⠛⠲⢶⡠⢄⠐⣣⠃⣰⠗⠋⢀⣯⠁⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣯⣠⠬⠦⢤⣀⠈⠓⢽⣾⢔⣡⡴⠞⠻⠙⢳⡄
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣵⣳⠖⠉⠉⢉⣩⣵⣿⣿⣒⢤⣴⠤⠽⣬⡇
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⢻⣟⠟⠋⢡⡎⢿⢿⠳⡕⢤⡉⡷⡽⠁
+⣧⢮⢭⠛⢲⣦⣀⠀⠀⠀⠠⡀⠀⠀⠀⡾⣥⣏⣖⡟⠸⢺⠀⠀⠈⠙⠋⠁⠀⠀
+⠈⠻⣶⡛⠲⣄⠀⠙⠢⣀⠀⢇⠀⠀⠀⠘⠿⣯⣮⢦⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢻⣿⣥⡬⠽⠶⠤⣌⣣⣼⡔⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢠⣿⣧⣤⡴⢤⡴⣶⣿⣟⢯⡙⠒⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠘⣗⣞⣢⡟⢋⢜⣿⠛⡿⡄⢻⡮⣄⠈⠳⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠈⠻⠮⠴⠵⢋⣇⡇⣷⢳⡀⢱⡈⢋⠛⣄⣹⣲⡀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣱⡇⣦⢾⣾⠿⠟⠿⠷⠷⣻⠧⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠻⠽⠞⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+
+#- 𝗩𝗬𝗢𝗡𝗜𝗫 ℵ 𝗜𝗡𝗙𝗜𝗡𝗜𝗧𝗘
+
+╰➤ INFORMATION:
+ ▢ Developer: @DitzzNotDev
+ ▢ Version: 3.1
+ ▢ Status: No Access
+  
+  Perubahan kode terdeteksi, Harap membeli script kepada reseller
+  yang tersedia dan legal
+  `))
+        activateSecureMode();
+        hardExit(1);
+        }
+      }
+    } catch {
+      hardExit(1);
+    }
+  }, 2000);
+
+  global.validateToken = async (databaseUrl, tokenBot) => {
+  try {
+    const res = await axios.get(databaseUrl, { timeout: 5000 });
+    const tokens = (res.data && res.data.tokens) || [];
+
+    if (!tokens.includes(tokenBot)) {
+      console.log(chalk.bold.yellow(`
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⢔⣶⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡼⠗⡿⣾⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡼⠓⡞⢩⣯⡀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠰⡹⠁⢰⠃⣩⣿⡇⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣿⠿⣉⣩⠛⠲⢶⡠⢄⠐⣣⠃⣰⠗⠋⢀⣯⠁⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣯⣠⠬⠦⢤⣀⠈⠓⢽⣾⢔⣡⡴⠞⠻⠙⢳⡄
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣵⣳⠖⠉⠉⢉⣩⣵⣿⣿⣒⢤⣴⠤⠽⣬⡇
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⢻⣟⠟⠋⢡⡎⢿⢿⠳⡕⢤⡉⡷⡽⠁
+⣧⢮⢭⠛⢲⣦⣀⠀⠀⠀⠠⡀⠀⠀⠀⡾⣥⣏⣖⡟⠸⢺⠀⠀⠈⠙⠋⠁⠀⠀
+⠈⠻⣶⡛⠲⣄⠀⠙⠢⣀⠀⢇⠀⠀⠀⠘⠿⣯⣮⢦⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢻⣿⣥⡬⠽⠶⠤⣌⣣⣼⡔⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢠⣿⣧⣤⡴⢤⡴⣶⣿⣟⢯⡙⠒⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠘⣗⣞⣢⡟⢋⢜⣿⠛⡿⡄⢻⡮⣄⠈⠳⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠈⠻⠮⠴⠵⢋⣇⡇⣷⢳⡀⢱⡈⢋⠛⣄⣹⣲⡀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣱⡇⣦⢾⣾⠿⠟⠿⠷⠷⣻⠧⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠻⠽⠞⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+
+#- 𝗩𝗬𝗢𝗡𝗜𝗫 ℵ 𝗜𝗡𝗙𝗜𝗡𝗜𝗧𝗘
+
+╰➤ INFORMATION:
+ ▢ Developer: @DitzzNotDev
+ ▢ Version: 3.1
+ ▢ Status: No Access
+  
+  Token tidak terdaftar, Mohon membeli akses kepada reseller yang tersedia
+  `));
+
+      try {
+      } catch (e) {
+      }
+
+      activateSecureMode();
+      hardExit(1);
+    }
+  } catch (err) {
+    console.log(chalk.bold.yellow(`
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⢔⣶⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡼⠗⡿⣾⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡼⠓⡞⢩⣯⡀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠰⡹⠁⢰⠃⣩⣿⡇⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣿⠿⣉⣩⠛⠲⢶⡠⢄⠐⣣⠃⣰⠗⠋⢀⣯⠁⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣯⣠⠬⠦⢤⣀⠈⠓⢽⣾⢔⣡⡴⠞⠻⠙⢳⡄
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣵⣳⠖⠉⠉⢉⣩⣵⣿⣿⣒⢤⣴⠤⠽⣬⡇
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⢻⣟⠟⠋⢡⡎⢿⢿⠳⡕⢤⡉⡷⡽⠁
+⣧⢮⢭⠛⢲⣦⣀⠀⠀⠀⠠⡀⠀⠀⠀⡾⣥⣏⣖⡟⠸⢺⠀⠀⠈⠙⠋⠁⠀⠀
+⠈⠻⣶⡛⠲⣄⠀⠙⠢⣀⠀⢇⠀⠀⠀⠘⠿⣯⣮⢦⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢻⣿⣥⡬⠽⠶⠤⣌⣣⣼⡔⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢠⣿⣧⣤⡴⢤⡴⣶⣿⣟⢯⡙⠒⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠘⣗⣞⣢⡟⢋⢜⣿⠛⡿⡄⢻⡮⣄⠈⠳⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠈⠻⠮⠴⠵⢋⣇⡇⣷⢳⡀⢱⡈⢋⠛⣄⣹⣲⡀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣱⡇⣦⢾⣾⠿⠟⠿⠷⠷⣻⠧⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠻⠽⠞⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+
+#- 𝗩𝗬𝗢𝗡𝗜𝗫 ℵ 𝗜𝗡𝗙𝗜𝗡𝗜𝗧𝗘
+
+╰➤ INFORMATION:
+ ▢ Developer: @DitzzNotDev
+ ▢ Version: 3.1
+ ▢ Status: No Access
+  
+  Gagal menghubungkan ke server, Akses ditolak
+  `));
+    activateSecureMode();
+    hardExit(1);
+  }
+};
+})();
+
+const question = (query) => new Promise((resolve) => {
+    const rl = require('readline').createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+    rl.question(query, (answer) => {
+        rl.close();
+        resolve(answer);
+    });
+});
+
+async function isAuthorizedToken(token) {
+    try {
+        const res = await axios.get(databaseUrl);
+        const authorizedTokens = res.data.tokens;
+        return authorizedTokens.includes(token);
+    } catch (e) {
+        return false;
+    }
+}
+
+(async () => {
+    await validateToken(databaseUrl, tokenBot);
+})();
+
+const bot = new Telegraf(tokenBot);
+let secureMode = false;
+let sock = null;
+let isWhatsAppConnected = false;
+let linkedWhatsAppNumber = '';
+let lastPairingMessage = null;
+const usePairingCode = true;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const premiumFile = './database/premium.json';
+const cooldownFile = './database/cooldown.json'
+
+const loadPremiumUsers = () => {
+    try {
+        const data = fs.readFileSync(premiumFile);
+        return JSON.parse(data);
+    } catch (err) {
+        return {};
+    }
+};
+
+const savePremiumUsers = (users) => {
+    fs.writeFileSync(premiumFile, JSON.stringify(users, null, 2));
+};
+
+const addPremiumUser = (userId, duration) => {
+    const premiumUsers = loadPremiumUsers();
+    const expiryDate = moment().add(duration, 'days').tz('Asia/Jakarta').format('DD-MM-YYYY');
+    premiumUsers[userId] = expiryDate;
+    savePremiumUsers(premiumUsers);
+    return expiryDate;
+};
+
+const removePremiumUser = (userId) => {
+    const premiumUsers = loadPremiumUsers();
+    delete premiumUsers[userId];
+    savePremiumUsers(premiumUsers);
+};
+
+const isPremiumUser = (userId) => {
+    const premiumUsers = loadPremiumUsers();
+    if (premiumUsers[userId]) {
+        const expiryDate = moment(premiumUsers[userId], 'DD-MM-YYYY');
+        if (moment().isBefore(expiryDate)) {
+            return true;
+        } else {
+            removePremiumUser(userId);
+            return false;
+        }
+    }
+    return false;
+};
+
+const loadCooldown = () => {
+    try {
+        const data = fs.readFileSync(cooldownFile)
+        return JSON.parse(data).cooldown || 5
+    } catch {
+        return 5
+    }
+}
+
+const saveCooldown = (seconds) => {
+    fs.writeFileSync(cooldownFile, JSON.stringify({ cooldown: seconds }, null, 2))
+}
+
+let cooldown = loadCooldown()
+const userCooldowns = new Map()
+
+function formatRuntime() {
+  let sec = Math.floor(process.uptime());
+  let hrs = Math.floor(sec / 3600);
+  sec %= 3600;
+  let mins = Math.floor(sec / 60);
+  sec %= 60;
+  return `${hrs}h ${mins}m ${sec}s`;
+}
+
+function formatMemory() {
+  const usedMB = process.memoryUsage().rss / 1024 / 1024;
+  return `${usedMB.toFixed(0)} MB`;
+}
+
+const startSesi = async () => {
+console.clear();
+  console.log(chalk.bold.yellow(`
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⢔⣶⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡼⠗⡿⣾⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡼⠓⡞⢩⣯⡀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠰⡹⠁⢰⠃⣩⣿⡇⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣿⠿⣉⣩⠛⠲⢶⡠⢄⠐⣣⠃⣰⠗⠋⢀⣯⠁⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣯⣠⠬⠦⢤⣀⠈⠓⢽⣾⢔⣡⡴⠞⠻⠙⢳⡄
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣵⣳⠖⠉⠉⢉⣩⣵⣿⣿⣒⢤⣴⠤⠽⣬⡇
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⢻⣟⠟⠋⢡⡎⢿⢿⠳⡕⢤⡉⡷⡽⠁
+⣧⢮⢭⠛⢲⣦⣀⠀⠀⠀⠠⡀⠀⠀⠀⡾⣥⣏⣖⡟⠸⢺⠀⠀⠈⠙⠋⠁⠀⠀
+⠈⠻⣶⡛⠲⣄⠀⠙⠢⣀⠀⢇⠀⠀⠀⠘⠿⣯⣮⢦⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢻⣿⣥⡬⠽⠶⠤⣌⣣⣼⡔⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢠⣿⣧⣤⡴⢤⡴⣶⣿⣟⢯⡙⠒⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠘⣗⣞⣢⡟⢋⢜⣿⠛⡿⡄⢻⡮⣄⠈⠳⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠈⠻⠮⠴⠵⢋⣇⡇⣷⢳⡀⢱⡈⢋⠛⣄⣹⣲⡀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣱⡇⣦⢾⣾⠿⠟⠿⠷⠷⣻⠧⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠻⠽⠞⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+#- 𝗩𝗬𝗢𝗡𝗜𝗫 ℵ 𝗜𝗡𝗙𝗜𝗡𝗜𝗧𝗘
+
+╰➤ INFORMATION:
+ ▢ Developer: @DitzzNotDev
+ ▢ Version: 3.1
+ ▢ Status: Bot Connected
+  `))
+    
+const store = makeInMemoryStore({
+  logger: require('pino')().child({ level: 'silent', stream: 'store' })
+})
+    const { state, saveCreds } = await useMultiFileAuthState('./session');
+    const { version } = await fetchLatestBaileysVersion();
+
+    const connectionOptions = {
+        version,
+        keepAliveIntervalMs: 30000,
+        printQRInTerminal: !usePairingCode,
+        logger: pino({ level: "silent" }),
+        auth: state,
+        browser: ['Mac OS', 'Safari', '10.15.7'],
+        getMessage: async (key) => ({
+            conversation: 'Netrality',
+        }),
+    };
+
+    sock = makeWASocket(connectionOptions);
+    
+    sock.ev.on("messages.upsert", async (m) => {
+        try {
+            if (!m || !m.messages || !m.messages[0]) {
+                return;
+            }
+
+            const msg = m.messages[0]; 
+            const chatId = msg.key.remoteJid || "Tidak Diketahui";
+
+        } catch (error) {
+        }
+    });
+
+    sock.ev.on('creds.update', saveCreds);
+    store.bind(sock.ev);
+    
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === 'open') {
+        
+        if (lastPairingMessage) {
+        const connectedMenu = `<blockquote>
+#- 𝗛𝗢𝗩𝗘𝗟𝗬 - 𝗙𝗟𝗢𝗪𝗘𝗥
+
+▢ Number: ${lastPairingMessage.phoneNumber}
+▢ Pairing Code: ${lastPairingMessage.pairingCode}
+▢ Type: Connected
+</blockquote>`;
+
+        try {
+          bot.telegram.editMessageCaption(
+            lastPairingMessage.chatId,
+            lastPairingMessage.messageId,
+            undefined,
+            connectedMenu,
+            { parse_mode: "HTML" }
+          );
+        } catch (e) {
+        }
+      }
+      
+            console.clear();
+            isWhatsAppConnected = true;
+            const currentTime = moment().tz('Asia/Jakarta').format('HH:mm:ss');
+            console.log(chalk.bold.yellow(`
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⢔⣶⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡼⠗⡿⣾⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡼⠓⡞⢩⣯⡀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠰⡹⠁⢰⠃⣩⣿⡇⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣿⠿⣉⣩⠛⠲⢶⡠⢄⠐⣣⠃⣰⠗⠋⢀⣯⠁⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣯⣠⠬⠦⢤⣀⠈⠓⢽⣾⢔⣡⡴⠞⠻⠙⢳⡄
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣵⣳⠖⠉⠉⢉⣩⣵⣿⣿⣒⢤⣴⠤⠽⣬⡇
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⢻⣟⠟⠋⢡⡎⢿⢿⠳⡕⢤⡉⡷⡽⠁
+⣧⢮⢭⠛⢲⣦⣀⠀⠀⠀⠠⡀⠀⠀⠀⡾⣥⣏⣖⡟⠸⢺⠀⠀⠈⠙⠋⠁⠀⠀
+⠈⠻⣶⡛⠲⣄⠀⠙⠢⣀⠀⢇⠀⠀⠀⠘⠿⣯⣮⢦⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢻⣿⣥⡬⠽⠶⠤⣌⣣⣼⡔⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢠⣿⣧⣤⡴⢤⡴⣶⣿⣟⢯⡙⠒⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠘⣗⣞⣢⡟⢋⢜⣿⠛⡿⡄⢻⡮⣄⠈⠳⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠈⠻⠮⠴⠵⢋⣇⡇⣷⢳⡀⢱⡈⢋⠛⣄⣹⣲⡀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣱⡇⣦⢾⣾⠿⠟⠿⠷⠷⣻⠧⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠻⠽⠞⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+
+#- 𝗩𝗬𝗢𝗡𝗜𝗫 ℵ 𝗜𝗡𝗙𝗜𝗡𝗜𝗧𝗘
+
+╰➤ INFORMATION:
+ ▢ Developer: @DitzzNotDev
+ ▢ Version: 3.1
+ ▢ Status: Sender Connected
+  `))
+        }
+
+                 if (connection === 'close') {
+            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            console.log(
+                chalk.red('Koneksi WhatsApp terputus:'),
+                shouldReconnect ? 'Mencoba Menautkan Perangkat' : 'Silakan Menautkan Perangkat Lagi'
+            );
+            if (shouldReconnect) {
+                startSesi();
+            }
+            isWhatsAppConnected = false;
+        }
+    });
+};
+
+startSesi();
+
+const checkWhatsAppConnection = (ctx, next) => {
+    if (!isWhatsAppConnected) {
+        ctx.reply("🪧 ☇ Tidak ada sender yang terhubung");
+        return;
+    }
+    next();
+};
+
+const checkCooldown = (ctx, next) => {
+    const userId = ctx.from.id
+    const now = Date.now()
+
+    if (userCooldowns.has(userId)) {
+        const lastUsed = userCooldowns.get(userId)
+        const diff = (now - lastUsed) / 1000
+
+        if (diff < cooldown) {
+            const remaining = Math.ceil(cooldown - diff)
+            ctx.reply(`⏳ ☇ Harap menunggu ${remaining} detik`)
+            return
+        }
+    }
+
+    userCooldowns.set(userId, now)
+    next()
+}
+
+const checkPremium = (ctx, next) => {
+    if (!isPremiumUser(ctx.from.id)) {
+        ctx.reply("❌ ☇ Akses hanya untuk premium");
+        return;
+    }
+    next();
+};
+
+bot.command("requestpair", async (ctx) => {
+   if (ctx.from.id != ownerID) {
+        return ctx.reply("❌ ☇ Akses hanya untuk pemilik");
+    }
+    
+  const args = ctx.message.text.split(" ")[1];
+  if (!args) return ctx.reply("🪧 ☇ Format: /requestpair 62×××");
+
+  const phoneNumber = args.replace(/[^0-9]/g, "");
+  if (!phoneNumber) return ctx.reply("❌ ☇ Nomor tidak valid");
+
+  try {
+    if (!sock) return ctx.reply("❌ ☇ Socket belum siap, coba lagi nanti");
+    if (sock.authState.creds.registered) {
+      return ctx.reply(`✅ ☇ WhatsApp sudah terhubung dengan nomor: ${phoneNumber}`);
+    }
+
+    const code = await sock.requestPairingCode(phoneNumber);  
+    const formattedCode = code?.match(/.{1,4}/g)?.join("-") || code;  
+
+    const pairingMenu = `<blockquote>
+#- 𝗛𝗢𝗩𝗘𝗟𝗬 - 𝗙𝗟𝗢𝗪𝗘𝗥
+
+▢ Number: ${phoneNumber}
+▢ Pairing Code: ${formattedCode}
+▢ Type: Not Connected
+</blockquote>`;
+
+    const sentMsg = await ctx.replyWithPhoto(thumbnailUrl, {  
+      caption: pairingMenu,  
+      parse_mode: "HTML"  
+    });  
+
+    lastPairingMessage = {  
+      chatId: ctx.chat.id,  
+      messageId: sentMsg.message_id,  
+      phoneNumber,  
+      pairingCode: formattedCode
+    };
+
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+if (sock) {
+  sock.ev.on("connection.update", async (update) => {
+    if (update.connection === "open" && lastPairingMessage) {
+      const updateConnectionMenu = `<blockquote>
+#- 𝗛𝗢𝗩𝗘𝗟𝗬 - 𝗙𝗟𝗢𝗪𝗘𝗥
+
+▢ Number: ${lastPairingMessage.phoneNumber}
+▢ Pairing Code: ${lastPairingMessage.pairingCode}
+▢ Type: Connected
+</blockquote>`;
+
+      try {  
+        await bot.telegram.editMessageCaption(  
+          lastPairingMessage.chatId,  
+          lastPairingMessage.messageId,  
+          undefined,  
+          updateConnectionMenu,  
+          { parse_mode: "HTML" }  
+        );  
+      } catch (e) {  
+      }  
+    }
+  });
+}
+
+bot.command("setcooldown", async (ctx) => {
+    if (ctx.from.id != ownerID) {
+        return ctx.reply("❌ ☇ Akses hanya untuk pemilik");
+    }
+
+    const args = ctx.message.text.split(" ");
+    const seconds = parseInt(args[1]);
+
+    if (isNaN(seconds) || seconds < 0) {
+        return ctx.reply("🪧 ☇ Format: /setcooldown 5");
+    }
+
+    cooldown = seconds
+    saveCooldown(seconds)
+    ctx.reply(`✅ ☇ Cooldown berhasil diatur ke ${seconds} detik`);
+});
+
+bot.command("resetsession", async (ctx) => {
+  if (ctx.from.id != ownerID) {
+    return ctx.reply("❌ ☇ Akses hanya untuk pemilik");
+  }
+
+  try {
+    const sessionDirs = ["./session", "./sessions"];
+    let deleted = false;
+
+    for (const dir of sessionDirs) {
+      if (fs.existsSync(dir)) {
+        fs.rmSync(dir, { recursive: true, force: true });
+        deleted = true;
+      }
+    }
+
+    if (deleted) {
+      await ctx.reply("✅ ☇ Session berhasil dihapus, panel akan restart");
+      setTimeout(() => {
+        process.exit(1);
+      }, 2000);
+    } else {
+      ctx.reply("🪧 ☇ Tidak ada folder session yang ditemukan");
+    }
+  } catch (err) {
+    console.error(err);
+    ctx.reply("❌ ☇ Gagal menghapus session");
+  }
+});
+
+bot.command('addpremium', async (ctx) => {
+    if (ctx.from.id != ownerID) {
+        return ctx.reply("❌ ☇ Akses hanya untuk pemilik");
+    }
+    const args = ctx.message.text.split(" ");
+    if (args.length < 3) {
+        return ctx.reply("🪧 ☇ Format: /addpremium 12345678 30d");
+    }
+    const userId = args[1];
+    const duration = parseInt(args[2]);
+    if (isNaN(duration)) {
+        return ctx.reply("🪧 ☇ Durasi harus berupa angka dalam hari");
+    }
+    const expiryDate = addPremiumUser(userId, duration);
+    ctx.reply(`✅ ☇ ${userId} berhasil ditambahkan sebagai pengguna premium sampai ${expiryDate}`);
 });
 
 bot.command('delpremium', async (ctx) => {
@@ -1445,30 +2164,156 @@ ${snippet}
   }
 });
 
-bot.command("update", async (ctx) => {
-    const repoRaw = "https://raw.githubusercontent.com/NAMA-AKUN/NAMA-REPO/main/index.js";
+// IMPORT CONFIG
+const { OWNER_ID } = require("./settings/config");
 
-    ctx.reply("⏳ 𝘚𝘦𝘥𝘢𝘯𝘨 𝘊𝘩𝘦𝘬 𝘜𝘱𝘥𝘢𝘵𝘦 𝘊𝘶𝘺𝘺...");
+// ================= CONFIG =================
 
-    try {
-        const { data } = await axios.get(repoRaw);
+const RAW_URL = "https://raw.githubusercontent.com/USERNAME/REPO/main/index.js";
+const LOCAL_FILE = "./index.js";
 
-        if (!data) {
-            return ctx.reply("❌ 𝘝𝘺𝘰𝘯𝘪𝘹 - 𝘌𝘳𝘳𝘰𝘳  −  𝘍𝘪𝘭𝘦 𝘒𝘰𝘴𝘰𝘯𝘨!");
-        }
+// ==========================================
+// CEK UPDATE MANUAL
+// ==========================================
 
-        fs.writeFileSync("./index.js", data);
+bot.command("cekupdate", async (ctx) => {
 
-        await ctx.reply("✅ 𝘜𝘱𝘥𝘢𝘵𝘦 𝘉𝘦𝘳𝘩𝘢𝘴𝘪𝘭\n𝘚𝘪𝘭𝘢𝘩𝘬𝘢𝘯 𝘙𝘦𝘴𝘵𝘢𝘳𝘵 𝘉𝘰𝘵.");
+    try {
 
-        process.exit(); // restart jika pakai PM2
-    } catch (e) {
-        console.log(e);
+        await ctx.reply("🔍 Mengecek update...");
 
-        ctx.reply("❌ 𝘜𝘱𝘥𝘢𝘵𝘦 𝘌𝘳𝘳𝘰𝘳. 𝘗𝘢𝘴𝘵𝘪𝘬𝘢𝘯 𝘙𝘦𝘱𝘰 𝘋𝘢𝘯 𝘐𝘯𝘥𝘦𝘹.𝘫𝘴 𝘛𝘦𝘳𝘴𝘦𝘥𝘪𝘢");
-    }
+        const online = await axios.get(RAW_URL, {
+            timeout: 10000
+        });
+
+        const local = fs.readFileSync(LOCAL_FILE, "utf8");
+
+        if (!online.data || online.data.length < 100) {
+            return ctx.reply("❌ File update rusak.");
+        }
+
+        if (online.data === local) {
+            return ctx.reply("✅ Sudah versi terbaru.");
+        }
+
+        ctx.reply("⚠️ Update tersedia!");
+
+    } catch (err) {
+
+        console.log(err);
+
+        ctx.reply("❌ Gagal cek update.");
+
+    }
+
 });
 
+// ==========================================
+// UPDATE BOT
+// ==========================================
+
+bot.command("update", async (ctx) => {
+
+    try {
+
+        await ctx.reply("⬇️ Mengambil update terbaru...");
+
+        const online = await axios.get(RAW_URL, {
+            timeout: 15000
+        });
+
+        const newCode = online.data;
+
+        // VALIDASI
+        if (!newCode || newCode.length < 100) {
+            return ctx.reply("❌ File update tidak valid.");
+        }
+
+        // TULIS FILE
+        fs.writeFileSync(LOCAL_FILE, newCode);
+
+        await ctx.reply(
+            "✅ Update berhasil!\n" +
+            "♻️ Restart otomatis..."
+        );
+
+        // RESTART
+        setTimeout(() => {
+
+            exec("pm2 restart all", (err) => {
+
+                if (err) {
+
+                    console.log("PM2 tidak ditemukan");
+
+                    process.exit(0);
+
+                }
+
+            });
+
+        }, 3000);
+
+    } catch (err) {
+
+        console.log(err);
+
+        ctx.reply("❌ Update gagal.");
+
+    }
+
+});
+
+// ==========================================
+// AUTO NOTIF UPDATE
+// ==========================================
+
+let lastVersion = null;
+
+async function autoCheckUpdate() {
+
+    try {
+
+        const online = await axios.get(RAW_URL, {
+            timeout: 10000
+        });
+
+        const onlineData = online.data;
+
+        if (!onlineData || onlineData.length < 100) return;
+
+        // PERTAMA KALI
+        if (lastVersion === null) {
+            lastVersion = onlineData;
+            return;
+        }
+
+        // ADA UPDATE
+        if (onlineData !== lastVersion) {
+
+            lastVersion = onlineData;
+
+            bot.telegram.sendMessage(
+                OWNER_ID,
+                "🚀 UPDATE BARU TERDETEKSI!\n\n" +
+                "Gunakan /update untuk memperbarui bot."
+            );
+
+        }
+
+    } catch (err) {
+
+        console.log("AUTO UPDATE CHECK ERROR");
+
+    }
+
+}
+
+// ==========================================
+// AUTO CEK SETIAP 1 MENIT
+// ==========================================
+
+setInterval(autoCheckUpdate, 60000);
 
 
 // CASE MURBUG DISINI \\
